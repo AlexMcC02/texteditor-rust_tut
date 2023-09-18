@@ -8,6 +8,7 @@ clippy::wildcard_enum_match_arm,
 clippy::else_if_without_else
 )]
 mod editor;
+mod highlighting;
 mod terminal;
 mod document;
 mod row;
