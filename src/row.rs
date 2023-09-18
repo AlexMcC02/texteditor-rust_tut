@@ -1,7 +1,6 @@
 use crate::highlighting;
 use crate::SearchDirection;
 use std::cmp;
-use std::thread::current;
 use termion::color;
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -42,7 +41,7 @@ impl Row {
                 if highlighting_type != current_highlighting {
                     current_highlighting = highlighting_type;
                     let start_highlight =
-                        format!("{}", termion::color::Fg(highlighting_type.to_color()));
+                        format!("{}", color::Fg(highlighting_type.to_color()));
                     result.push_str(&start_highlight[..]);
                 }
                 if c == '\t' {
@@ -52,7 +51,7 @@ impl Row {
                 }
             }
         }
-        let end_highlight = format!("{}", termion::color::Fg(color::Reset));
+        let end_highlight = format!("{}", color::Fg(color::Reset));
         result.push_str(&end_highlight[..]);
         result
     }
@@ -134,7 +133,7 @@ impl Row {
     }
 
     pub fn find(&self, query: &str, at: usize, direction: SearchDirection) -> Option<usize> {
-        if at > self.len {
+        if at > self.len || query.is_empty() {
             return None;
         }
         let start = if direction == SearchDirection::Forward {
@@ -171,14 +170,53 @@ impl Row {
         None
     }
 
-    pub fn highlight(&mut self) {
+    pub fn highlight(&mut self, word: Option<&str>) {
         let mut highlighting = Vec::new();
-        for c in self.string.chars() {
-            if c.is_ascii_digit() {
+        let chars: Vec<char> = self.string.chars().collect();
+        let mut matches = Vec::new();
+        let mut search_index = 0;
+
+        if let Some(word) = word {
+            while let Some(search_match) = self.find(word, search_index, SearchDirection::Forward) {
+                matches.push(search_match);
+                if let Some(next_index) = search_match.checked_add(word[..].graphemes(true).count()) {
+                    search_index = next_index;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        let mut prev_is_separator = true;
+        let mut index = 0;
+        while let Some(c) = chars.get(index) {
+            if let Some(word) = word {
+                if matches.contains(&index) {
+                    for _ in word[..].graphemes(true) {
+                        index += 1;
+                        highlighting.push(highlighting::Type::Match);
+                    }
+                    continue;
+                }
+            }
+
+            let previous_highlight = if index > 0 {
+                highlighting
+                    .get(index - 1)
+                    .unwrap_or(&highlighting::Type::None)
+            } else {
+                &highlighting::Type::None
+            };
+            if (c.is_ascii_digit()
+                && (prev_is_separator || previous_highlight == &highlighting::Type::Number))
+                || (c == &'.' && previous_highlight == &highlighting::Type::Number)
+            {
                 highlighting.push(highlighting::Type::Number);
             } else {
                 highlighting.push(highlighting::Type::None);
             }
+            prev_is_separator = c.is_ascii_punctuation() || c.is_ascii_whitespace();
+            index += 1;
         }
         self.highlighting = highlighting;
     }

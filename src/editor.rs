@@ -158,6 +158,7 @@ impl Editor {
             self.cursor_position = old_position;
             self.scroll();
         }
+        self.document.highlight(None);
     }
 
     fn process_keypress(&mut self) -> Result<(), std::io::Error> {
