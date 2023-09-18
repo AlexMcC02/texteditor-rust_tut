@@ -144,12 +144,14 @@ impl Editor {
                     if let Some(position) =
                         editor
                             .document
-                            .find(&query, &editor.cursor_position, direction) {
+                            .find(&query, &editor.cursor_position, direction)
+                    {
                         editor.cursor_position = position;
                         editor.scroll();
                     } else if moved {
                         editor.move_cursor(Key::Left);
                     }
+                    editor.document.highlight(Some(query));
                 },
             )
             .unwrap_or(None);
@@ -345,7 +347,8 @@ impl Editor {
         );
 
         let line_indicator = format!(
-            "{}/{}",
+            "{} | {}/{}",
+            self.document.file_type(),
             self.cursor_position.y.saturating_add(1),
             self.document.len()
         );
