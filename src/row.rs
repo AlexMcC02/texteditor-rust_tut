@@ -180,7 +180,7 @@ impl Row {
                 if let Some(next_index) = search_match.checked_add(word[..].graphemes(true).count())
                 {
                     #[allow(clippy::indexing_slicing)]
-                    for i in index.saturating_add(search_match)..next_index {
+                    for i in search_match..next_index {
                         self.highlighting[i] = highlighting::Type::Match;
                     }
                     index = next_index;
