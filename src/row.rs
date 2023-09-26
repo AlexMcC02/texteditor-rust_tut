@@ -1,9 +1,10 @@
-use crate::{highlighting, HighlightingOptions};
 use crate::SearchDirection;
+use crate::{highlighting, HighlightingOptions};
 use std::cmp;
 use termion::color;
 use unicode_segmentation::UnicodeSegmentation;
 
+// Useless comment.
 #[derive(Default)]
 pub struct Row {
     string: String,
@@ -40,8 +41,7 @@ impl Row {
                     .unwrap_or(&highlighting::Type::None);
                 if highlighting_type != current_highlighting {
                     current_highlighting = highlighting_type;
-                    let start_highlight =
-                        format!("{}", color::Fg(highlighting_type.to_color()));
+                    let start_highlight = format!("{}", color::Fg(highlighting_type.to_color()));
                     result.push_str(&start_highlight[..]);
                 }
                 if c == '\t' {
@@ -147,7 +147,7 @@ impl Row {
             at
         };
         #[allow(clippy::integer_arithmetic)]
-            let substring: String = self.string[..]
+        let substring: String = self.string[..]
             .graphemes(true)
             .skip(start)
             .take(end - start)
@@ -159,7 +159,7 @@ impl Row {
         };
         if let Some(matching_byte_index) = matching_byte_index {
             for (grapheme_index, (byte_index, _)) in
-            substring[..].grapheme_indices(true).enumerate()
+                substring[..].grapheme_indices(true).enumerate()
             {
                 if matching_byte_index == byte_index {
                     #[allow(clippy::integer_arithmetic)]
@@ -208,6 +208,28 @@ impl Row {
             } else {
                 &highlighting::Type::None
             };
+            if opts.characters() && !in_string && *c == '\'' {
+                prev_is_separator = true;
+                if let Some(next_char) = chars.get(index.saturating_add(1)) {
+                    let closing_index = if *next_char == '\\' {
+                        index.saturating_add(3)
+                    } else {
+                        index.saturating_add(2)
+                    };
+                    if let Some(closing_char) = chars.get(closing_index) {
+                        if *closing_char == '\'' {
+                            for _ in 0..=closing_index.saturating_sub(index) {
+                                highlighting.push(highlighting::Type::Character);
+                                index += 1;
+                            }
+                            continue;
+                        }
+                    }
+                };
+                highlighting.push(highlighting::Type::None);
+                index += 1;
+                continue;
+            }
             if opts.strings() {
                 if in_string {
                     highlighting.push(highlighting::Type::String);
@@ -224,15 +246,24 @@ impl Row {
                     }
                     index += 1;
                     continue;
-                }
-                else if prev_is_separator && *c == '"' {
+                } else if prev_is_separator && *c == '"' {
                     highlighting.push(highlighting::Type::String);
                     in_string = true;
                     prev_is_separator = true;
                     index += 1;
                     continue;
                 }
-            } 
+            }
+            if opts.comments() && *c == '/' {
+                if let Some(next_char) = chars.get(index.saturating_add(1)) {
+                    if *next_char == '/' {
+                        for _ in index..chars.len() {
+                            highlighting.push(highlighting::Type::Comment);
+                        }
+                        break;
+                    }
+                };
+            }
             if opts.numbers() {
                 if (c.is_ascii_digit()
                     && (prev_is_separator || *previous_highlight == highlighting::Type::Number))
