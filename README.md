@@ -1,4 +1,4 @@
 ### Hecto Tutorial
 Following a great tutorial: https://www.flenker.blog/hecto/
 
-#### Progress Tracker: Bug fixing.
+#### Progress Tracker: Feature complete!
